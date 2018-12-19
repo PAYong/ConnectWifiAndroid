@@ -48,7 +48,7 @@ public class DeviceInfo extends AppCompatActivity {
     }
 
 
-    private void connectToWifi(String networkPass, String networkSSID) {
+    private void  connectToWifi(String networkPass, String networkSSID) {
         WifiConfiguration wifiConfig = new WifiConfiguration();
         wifiConfig.SSID = String.format("\"%s\"", networkSSID);
         wifiConfig.preSharedKey = String.format("\"%s\"", networkPass);
@@ -64,6 +64,8 @@ public class DeviceInfo extends AppCompatActivity {
         conf.SSID = "\"\"" + networkSSID + "\"\"";
         conf.preSharedKey = "\"" + networkPass + "\"";
         netId = wifiManager.addNetwork(conf);
+
+        wifiManager.getConnectionInfo();
         if( netId != -1 ){
             status.setText("Device is connected.");
             status.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
