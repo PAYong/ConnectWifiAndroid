@@ -26,12 +26,15 @@ public class DeviceInfo extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Intent intent = getIntent();
+        ssid = intent.getStringExtra("ssid");
+        setTitle(ssid);
+
         setContentView(R.layout.activity_device_info);
         password = findViewById(R.id.editTextPassword);
         connectBtn = findViewById(R.id.buttonConnect);
         status = findViewById(R.id.textViewStatus);
-        Intent intent = getIntent();
-        ssid = intent.getStringExtra("ssid");
 
         wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         if (!wifiManager.isWifiEnabled()) {
