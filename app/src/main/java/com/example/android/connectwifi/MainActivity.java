@@ -13,6 +13,7 @@ import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -70,8 +71,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 String ssid = ((TextView) view).getText().toString();
-                connectToWifi(ssid);
-                Toast.makeText(MainActivity.this,"Wifi SSID : "+ssid,Toast.LENGTH_SHORT).show();
+                //connectToWifi(ssid);
+                Intent intent = new Intent(getApplicationContext(), DeviceInfo.class);
+                intent.putExtra("ssid", ssid);
+                startActivity(intent);
             }
         });
 
@@ -93,7 +96,6 @@ public class MainActivity extends AppCompatActivity {
             unregisterReceiver(this);
 
             for (ScanResult scanResult : results) {
-                //arrayList.add(scanResult.SSID + " - " + scanResult.capabilities);
                 arrayList.add(scanResult.SSID);
                 adapter.notifyDataSetChanged();
             }
@@ -131,12 +133,18 @@ public class MainActivity extends AppCompatActivity {
         int netId = wifiManager.addNetwork(wifiConfig);
         wifiManager.disconnect();
         wifiManager.enableNetwork(netId, true);
+        wifiManager.setWifiEnabled(true);
         wifiManager.reconnect();
 
         WifiConfiguration conf = new WifiConfiguration();
         conf.SSID = "\"\"" + networkSSID + "\"\"";
         conf.preSharedKey = "\"" + networkPass + "\"";
-        wifiManager.addNetwork(conf);
+        netId = wifiManager.addNetwork(conf);
+        if( netId != -1 ){
+            Log.d("finallyConnect", "netId: " +  netId);
+        }else{
+            Log.d("finallyConnect", "ERROR");
+        }
     }
 
 }

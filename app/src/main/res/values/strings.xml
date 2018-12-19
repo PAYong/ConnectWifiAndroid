@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">ConnectWifi</string>
+    <string name="title_activity_device_info">DeviceInfo</string>
 </resources>
