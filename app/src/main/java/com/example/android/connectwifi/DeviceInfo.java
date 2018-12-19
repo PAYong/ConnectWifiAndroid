@@ -30,6 +30,7 @@ public class DeviceInfo extends AppCompatActivity {
     private EditText password, urlPath;
     private Button connectBtn, addDeviceBtn;
     private WifiManager wifiManager;
+    private WifiConfiguration wifiConfig;
     String ssid;
 
     private static String TAG = "DeviceInfo";
@@ -51,6 +52,8 @@ public class DeviceInfo extends AppCompatActivity {
         result = findViewById(R.id.textViewResult);
         result.setMovementMethod( new ScrollingMovementMethod());
         wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        wifiConfig = new WifiConfiguration();
+
         if (!wifiManager.isWifiEnabled()) {
             Toast.makeText(this, "WiFi is disabled ... We need to enable it", Toast.LENGTH_LONG).show();
             wifiManager.setWifiEnabled(true);
@@ -69,11 +72,18 @@ public class DeviceInfo extends AppCompatActivity {
                 new AddDevice().execute(urlPath.getText().toString() , "data");
             }
         });
+
+
+        if(wifiManager.getConnectionInfo().getSSID().contains(ssid)){
+            status.setText("Device is connected.");
+            status.setTextColor(getResources().getColor(R.color.colorAccent));
+        }
+
     }
 
 
     private void  connectToWifi(String networkPass, String networkSSID) {
-        WifiConfiguration wifiConfig = new WifiConfiguration();
+
         wifiConfig.SSID = String.format("\"%s\"", networkSSID);
         wifiConfig.preSharedKey = String.format("\"%s\"", networkPass);
 
@@ -90,9 +100,9 @@ public class DeviceInfo extends AppCompatActivity {
         netId = wifiManager.addNetwork(conf);
 
         wifiManager.getConnectionInfo();
-        if( netId != -1 ){
+        if( netId != -1 && wifiManager.getConnectionInfo().getSSID().contains(ssid)){
             status.setText("Device is connected.");
-            status.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
+            status.setBackgroundColor(getResources().getColor(R.color.colorAccent));
             Log.d(TAG, "Device is connected. netId: " +  netId);
         }else{
             Log.d(TAG, "ERROR");
