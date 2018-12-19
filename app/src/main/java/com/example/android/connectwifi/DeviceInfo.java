@@ -7,6 +7,7 @@ import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -48,7 +49,7 @@ public class DeviceInfo extends AppCompatActivity {
         addDeviceBtn = findViewById(R.id.buttonAddDevice);
         urlPath = findViewById(R.id.editTextURL);
         result = findViewById(R.id.textViewResult);
-
+        result.setMovementMethod( new ScrollingMovementMethod());
         wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         if (!wifiManager.isWifiEnabled()) {
             Toast.makeText(this, "WiFi is disabled ... We need to enable it", Toast.LENGTH_LONG).show();
@@ -146,6 +147,7 @@ public class DeviceInfo extends AppCompatActivity {
                     sb.append(current);
                 }
                 Log.d(TAG, "response:" +  sb.toString());
+
                 result.setText(sb.toString());
                 return true;
             } catch (Exception e) {

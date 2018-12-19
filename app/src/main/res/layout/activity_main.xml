@@ -17,7 +17,8 @@
         android:layout_height="50dp"
         android:layout_gravity="bottom"
         android:layout_margin="15dp"
-        android:background="@android:color/holo_red_light"
-        android:text="Scan WiFi"/>
+        android:background="@color/colorAccent"
+        android:text="Scan Available Devices"
+        android:textColor="#fff" />
 
 </LinearLayout>

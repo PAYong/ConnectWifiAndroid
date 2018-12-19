@@ -96,8 +96,10 @@ public class MainActivity extends AppCompatActivity {
             unregisterReceiver(this);
 
             for (ScanResult scanResult : results) {
-                arrayList.add(scanResult.SSID);
-                adapter.notifyDataSetChanged();
+                if(!scanResult.SSID.isEmpty()){
+                    arrayList.add(scanResult.SSID);
+                    adapter.notifyDataSetChanged();
+                }
             }
         };
     };
