@@ -1,19 +1,16 @@
 package com.example.android.connectwifi;
 
 import android.Manifest;
-import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.wifi.ScanResult;
-import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -23,23 +20,51 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreSettings;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private WifiManager wifiManager;
     private ListView listView;
-    private Button buttonScan;
+    private Button buttonScan, buttonSelectBuilding;
     private int size = 0;
     private List<ScanResult> results;
     private ArrayList<String> arrayList = new ArrayList<>();
     private ArrayAdapter adapter;
     private EditText pass;
 
+
+    private FirebaseFirestore firestore;
+    private FirebaseFirestoreSettings settings;
+    private DocumentReference configReference;
+    private ConfigurationFile config;
+
+    private String buildingName, buildingID, floorID, floorName;
+    private TextView selectedBuildingFloor;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+
+        getIncomingIntent();
+
+        config = new ConfigurationFile();
+
+        firestore = FirebaseFirestore.getInstance();
+        settings = new FirebaseFirestoreSettings.Builder()
+                .setTimestampsInSnapshotsEnabled(true)
+                .build();
+        firestore.setFirestoreSettings(settings);
 
         buttonScan = findViewById(R.id.scanBtn);
         buttonScan.setOnClickListener(new View.OnClickListener() {
@@ -71,15 +96,33 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 String ssid = ((TextView) view).getText().toString();
-                //connectToWifi(ssid);
                 Intent intent = new Intent(getApplicationContext(), DeviceInfo.class);
-                intent.putExtra("ssid", ssid);
-                startActivity(intent);
+
+                if(!config.getConfigSSID().isEmpty() && !floorName.isEmpty()){
+                    intent.putExtra("ssid", ssid);
+                    intent.putExtra("configWifiSSID", config.getConfigSSID());
+                    intent.putExtra("configWifiPassword", config.getConfigPassword());
+                    intent.putExtra("configWifiEndpoint", config.getConfigEndpoint());
+                    intent.putExtra("configEndpoints", config.getConfigEndpoints());
+                    intent.putExtra("selectedFloorID", floorID);
+                    startActivity(intent);
+                }else{
+                    Toast.makeText(getApplicationContext(), "No floor is selected.", Toast.LENGTH_LONG).show();
+                }
             }
         });
 
+        buttonSelectBuilding = findViewById(R.id.buildingBtn);
+        buttonSelectBuilding.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent buildingIntent = new Intent(getApplicationContext(), BuildingActivity.class);
+                startActivity(buildingIntent);
+            }
+        });
 
         scanWifi();
+        getConfigFile();
     }
 
     private void scanWifi() {
@@ -89,6 +132,20 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, "Scanning WiFi ...", Toast.LENGTH_SHORT).show();
     }
 
+    private void getIncomingIntent(){
+        if(getIntent().hasExtra("buildingName") && getIntent().hasExtra("buildingID") && getIntent().hasExtra("floorID")  && getIntent().hasExtra("floorName")){
+            buildingName = getIntent().getStringExtra("buildingName");
+            buildingID = getIntent().getStringExtra("buildingID");
+            floorName = getIntent().getStringExtra("floorName");
+            floorID = getIntent().getStringExtra("floorID");
+
+            selectedBuildingFloor = findViewById(R.id.selectedBuildingFloor);
+            selectedBuildingFloor.setText(buildingName + " / " + floorName);
+        }else{
+            floorName = "";
+        }
+    }
+
     BroadcastReceiver wifiReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -96,7 +153,7 @@ public class MainActivity extends AppCompatActivity {
             unregisterReceiver(this);
 
             for (ScanResult scanResult : results) {
-                if(!scanResult.SSID.isEmpty()){
+                if(!scanResult.SSID.isEmpty() && scanResult.SSID.contains("EXITMNGR")){
                     arrayList.add(scanResult.SSID);
                     adapter.notifyDataSetChanged();
                 }
@@ -104,49 +161,31 @@ public class MainActivity extends AppCompatActivity {
         };
     };
 
-    private void connectToWifi(final String wifiSSID) {
-        final Dialog dialog = new Dialog(this);
-        dialog.setContentView(R.layout.connect);
-        dialog.setTitle("Connect to Network");
-        TextView textSSID = (TextView) dialog.findViewById(R.id.textSSID1);
 
-        Button dialogButton = (Button) dialog.findViewById(R.id.okButton);
-        pass = (EditText) dialog.findViewById(R.id.textPassword);
-        textSSID.setText(wifiSSID);
+    private void getConfigFile(){
 
-        // if button is clicked, connect to the network;
-        dialogButton.setOnClickListener(new View.OnClickListener() {
+        configReference = firestore.collection("device_configuration").document("/config_1");
+        Task<DocumentSnapshot> configDocument = configReference.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
             @Override
-            public void onClick(View v) {
-                String checkPassword = pass.getText().toString();
-                finallyConnect(checkPassword, wifiSSID);
-                dialog.dismiss();
+            public void onSuccess(DocumentSnapshot documentSnapshot) {
+
+
+                config.setConfigSSID(documentSnapshot.getString("wifi_ssid"));
+                config.setConfigPassword(documentSnapshot.getString("wifi_password"));
+                config.setConfigEndpoint(documentSnapshot.getString("endpoint"));
+
+                Map<String, Object> listEndpoints = documentSnapshot.getData();
+
+                config.setConfigEndpoints(listEndpoints.get("endpoints").toString());
+                Toast.makeText(getApplicationContext(),"Successfully retrieve configuration.", Toast.LENGTH_SHORT).show();
+
             }
         });
-        dialog.show();
+
+
     }
 
-    private void finallyConnect(String networkPass, String networkSSID) {
-        WifiConfiguration wifiConfig = new WifiConfiguration();
-        wifiConfig.SSID = String.format("\"%s\"", networkSSID);
-        wifiConfig.preSharedKey = String.format("\"%s\"", networkPass);
 
-        // remember id
-        int netId = wifiManager.addNetwork(wifiConfig);
-        wifiManager.disconnect();
-        wifiManager.enableNetwork(netId, true);
-        wifiManager.setWifiEnabled(true);
-        wifiManager.reconnect();
 
-        WifiConfiguration conf = new WifiConfiguration();
-        conf.SSID = "\"\"" + networkSSID + "\"\"";
-        conf.preSharedKey = "\"" + networkPass + "\"";
-        netId = wifiManager.addNetwork(conf);
-        if( netId != -1 ){
-            Log.d("finallyConnect", "netId: " +  netId);
-        }else{
-            Log.d("finallyConnect", "ERROR");
-        }
-    }
 
 }
